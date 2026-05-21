@@ -1,0 +1,72 @@
+# ---- Terraform ----
+# Local state — contains plaintext secrets, must never be committed.
+# Use remote state (S3/MinIO/Terraform Cloud) for real prod.
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Plan output — may contain secrets
+*.tfplan
+*.tfplan.*
+
+# Provider binaries + module cache — regenerable, huge
+.terraform/
+.terraform.lock.hcl.bak
+
+# Variable files with secrets — commit only *.tfvars.example
+*.auto.tfvars
+*.auto.tfvars.json
+terraform.tfvars
+terraform.tfvars.json
+secrets.tfvars
+
+# Crash logs
+crash.log
+crash.*.log
+
+# ---- Ansible ----
+# Vault password file — plaintext, unlocks encrypted secrets
+.vault_pass
+.vault_pass.txt
+vault-password
+vault_password_file
+
+# Retry files from failed plays
+*.retry
+
+# Local inventory overrides
+inventory.local
+hosts.local
+
+# Roles installed via ansible-galaxy
+roles/external/
+collections/
+
+# ---- SSH / Secrets ----
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*.ppk
+.env
+.env.*
+!.env.example
+
+# direnv — contains secrets, never commit
+.envrc
+.envrc.local
+.direnv/
+!.envrc.example
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- Misc ----
+*.log
+*.bak
+*.tmp

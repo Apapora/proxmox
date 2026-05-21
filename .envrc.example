@@ -1,0 +1,20 @@
+# Copy this file to .envrc, fill in real values, then run: direnv allow
+#
+# .envrc is gitignored (see .gitignore). Never commit secrets.
+# Long-term plan: replace this with sops+age once we deploy Vault.
+
+# ---- Proxmox API ----
+# Endpoint URL of the Proxmox web/API server. Must include scheme + port.
+export PROXMOX_VE_ENDPOINT="https://10.0.0.19:8006"
+
+# API token in form: <user>@<realm>!<tokenid>=<secret>
+# Created via: Datacenter -> Permissions -> API Tokens
+export PROXMOX_VE_API_TOKEN="terraform@pve!provisioner=REPLACE_WITH_SECRET_UUID"
+
+# Skip TLS verify (PVE uses self-signed cert by default).
+# Set to false once you install a proper cert via cert-manager / Let's Encrypt.
+export PROXMOX_VE_INSECURE="true"
+
+# Optional: SSH endpoint, used by bpg/proxmox for some file-upload operations.
+export PROXMOX_VE_SSH_USERNAME="root"
+export PROXMOX_VE_SSH_AGENT="true"
