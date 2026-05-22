@@ -82,6 +82,17 @@ VM.Snapshot.Rollback
 
 Next: design `terraform/modules/vm/` (reusable module), then provision the 3 k3s node VMs (1 server + 2 agents).
 
+### Phase 2 — VM module + k3s VMs ✓
+
+- `terraform/modules/vm/` — reusable VM module. Inputs: name, cpus, memory_mb, disk_size_gb, ip_address (CIDR or null=DHCP), gateway, ssh_public_keys, tags, etc. Outputs: vm_id, name, ipv4_address (flattened primary), ipv4_addresses_raw, mac_addresses.
+- Root `terraform/main.tf` uses `for_each` over a `local.k3s_nodes` map → calls module 3×.
+- Static IPs in 10.0.0.150-152 (above any default DHCP pool).
+- Live VMs: `k3s-server-1` (.150), `k3s-agent-1` (.151), `k3s-agent-2` (.152). 4 vCPU, 8GB RAM, 40GB disk each. Cloud-init grows root fs to disk size.
+
+Module gotcha: child modules using a non-default provider need their own `required_providers` block (`modules/vm/versions.tf`), else OpenTofu looks up `hashicorp/<name>` and fails.
+
+Next: Phase 3 — Ansible base config (common role, k3s prereqs) + Phase 4 (k3s install).
+
 ## Conventions
 
 - **k8s distro**: k3s (lightweight, single-binary; fits this hardware better than kubeadm).

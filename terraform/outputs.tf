@@ -1,14 +1,20 @@
-output "test_vm_id" {
-  description = "PVE VMID assigned to the test VM"
-  value       = proxmox_virtual_environment_vm.test.vm_id
+output "k3s_nodes" {
+  description = "Map of node name -> connection info, ready for Ansible inventory"
+  value = {
+    for k, m in module.k3s_nodes : k => {
+      vm_id        = m.vm_id
+      ipv4_address = m.ipv4_address
+      mac          = try(m.mac_addresses[0], null)
+    }
+  }
 }
 
-output "test_vm_name" {
-  description = "Display name / cloud-init hostname"
-  value       = proxmox_virtual_environment_vm.test.name
+output "k3s_server_ip" {
+  description = "Convenience: IP of the k3s server node"
+  value       = module.k3s_nodes["k3s-server-1"].ipv4_address
 }
 
-output "test_vm_ipv4_addresses" {
-  description = "All IPv4 addresses reported by the QEMU guest agent (list per NIC)"
-  value       = proxmox_virtual_environment_vm.test.ipv4_addresses
+output "k3s_agent_ips" {
+  description = "Convenience: IPs of the k3s agent nodes"
+  value       = [for k, m in module.k3s_nodes : m.ipv4_address if startswith(k, "k3s-agent-")]
 }
