@@ -95,6 +95,7 @@ These will eventually be codified in Ansible.
 
 ## Conventions
 
+- **IaC tool**: OpenTofu, not Terraform (see `docs/decisions/0007-use-opentofu-not-terraform.md`). Run `tofu init/plan/apply`.
 - **k8s distro**: k3s (see `docs/decisions/0004-use-k3s.md`)
 - **Terraform provider**: `bpg/proxmox` (see `docs/decisions/0005-bpg-proxmox-provider.md`)
 - **Storage**: LVM-thin now, ZFS mirror on dock SSDs later (see `docs/decisions/0006-lvm-thin-vs-zfs.md`)
@@ -108,4 +109,9 @@ ssh pve                                          # connect to hypervisor
 ssh pve "qm list"                                # list VMs
 ssh pve "pvesm status"                           # storage status
 direnv reload                                    # re-source .envrc after edits
+
+cd terraform && tofu init                        # first time / after provider updates
+tofu plan                                        # preview changes
+tofu apply                                       # execute
+tofu destroy                                     # tear down everything in state
 ```

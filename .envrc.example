@@ -18,3 +18,8 @@ export PROXMOX_VE_INSECURE="true"
 # Optional: SSH endpoint, used by bpg/proxmox for some file-upload operations.
 export PROXMOX_VE_SSH_USERNAME="root"
 export PROXMOX_VE_SSH_AGENT="true"
+
+# ---- Terraform input variables ----
+# Any TF_VAR_<name> env var auto-binds to a Terraform variable named <name>.
+# SSH pubkey is injected into VMs via cloud-init.
+export TF_VAR_ssh_public_key="$(cat ~/.ssh/id_ed25519.pub)"

@@ -49,20 +49,38 @@ ArgoCD, Vault/OpenBao, Harbor, GitLab runners, Pi-hole, Grafana, Prometheus, Imm
 5. **Platform tools** — ArgoCD first, then Vault, Harbor, Prometheus/Grafana, GitLab runners (all GitOps from here)
 6. **User workloads** — Pi-hole (LXC), Plex/Jellyfin (LXC w/ AMD iGPU VA-API), Immich (k8s), Portainer
 
-## Phase 1 status — Foundation
+## Phase 1 status — Foundation ✓
 
-All foundation tasks complete:
+All foundation tasks complete. See ADRs 0001-0007.
 
-- Git scaffold + IaC-aware `.gitignore` (tfstate, vault pass, ssh keys, env, direnv)
-- SSH hardened on PVE — see ADR 0002
-- PVE API token + custom `TerraformProv` role — see ADR 0003
-- direnv loading `.envrc` with PVE endpoint/token on `cd` into repo
-- APT repos: enterprise disabled, `pve-no-subscription` active
-- Storage layout: keep LVM-thin default, plan ZFS for dock SSDs later — see ADR 0006
-- Cloud-init Ubuntu 24.04 template: VMID 9000, `ubuntu-2404-cloud`, QGA baked in
-- Repo scaffold: `bootstrap/`, `terraform/`, `ansible/`, `kubernetes/`, `docs/decisions/`
+## Phase 2 status — Terraform VM provisioning
 
-Next: initial commit (task 7), then Phase 2 — write the first Terraform to clone the template into k3s node VMs.
+Walking-skeleton complete:
+
+- OpenTofu CLI (chose over Terraform, see ADR 0007). Use `tofu` everywhere; `.tf` syntax unchanged.
+- `terraform/providers.tf`, `variables.tf`, `main.tf`, `outputs.tf` — clone template 9000, cloud-init injects SSH key, QGA reports IP back, SSH from workstation lands as `ubuntu@<vm>`.
+- `terraform/.terraform.lock.hcl` pins `bpg/proxmox v0.106.0`.
+- Throwaway VM verified end-to-end then destroyed.
+
+Two lessons baked in (apply to all future VM resources):
+
+1. `TerraformProv` role needs `VM.GuestAgent.Audit` + `VM.GuestAgent.Unrestricted` on top of ADR 0003's original list. Without them, `ipv4_addresses` output stays empty (403 from agent endpoint). Already added on the host.
+2. `initialization { upgrade = false }` — bpg defaults to `true` (= apt dist-upgrade on first boot). Slow, flaky, can abort cloud-init before ssh.socket starts. Always set `false`; Ansible owns package state from Phase 3 on.
+
+Canonical `TerraformProv` privilege set (alphabetized):
+
+```
+Datastore.Allocate, Datastore.AllocateSpace, Datastore.AllocateTemplate,
+Datastore.Audit, Mapping.Audit, Mapping.Modify, Mapping.Use, Pool.Allocate,
+Pool.Audit, SDN.Use, Sys.Audit, Sys.Console, Sys.Modify, Sys.PowerMgmt,
+VM.Allocate, VM.Audit, VM.Clone, VM.Config.CDROM, VM.Config.CPU,
+VM.Config.Cloudinit, VM.Config.Disk, VM.Config.HWType, VM.Config.Memory,
+VM.Config.Network, VM.Config.Options, VM.Console, VM.GuestAgent.Audit,
+VM.GuestAgent.Unrestricted, VM.Migrate, VM.PowerMgmt, VM.Snapshot,
+VM.Snapshot.Rollback
+```
+
+Next: design `terraform/modules/vm/` (reusable module), then provision the 3 k3s node VMs (1 server + 2 agents).
 
 ## Conventions
 
