@@ -91,6 +91,27 @@ Next: design `terraform/modules/vm/` (reusable module), then provision the 3 k3s
 
 Module gotcha: child modules using a non-default provider need their own `required_providers` block (`modules/vm/versions.tf`), else OpenTofu looks up `hashicorp/<name>` and fails.
 
+### Phase 2 — Pi-hole + Media LXCs ✓
+
+Architecture locked: k3s on the 3 VMs for app workloads + LXCs for foundational network services that must stay up independent of the cluster. No separate Docker VM.
+
+- `bootstrap/download-lxc-template.sh` — idempotent puller for Debian 12 LXC template into `local` storage. Resolved version: `debian-12-standard_12.12-1_amd64.tar.zst`.
+- `terraform/modules/lxc/` — reusable LXC module (`proxmox_virtual_environment_container`). Inputs mirror `modules/vm/` where they overlap.
+- Live LXCs: `pihole` (.160, VMID 103, unprivileged) + `media` (.161, VMID 104, unprivileged).
+
+**Hard PVE constraints on API tokens** (`terraform@pve`) — not bypassable via role privileges, enforced by hardcoded uid check:
+
+1. **Privileged LXCs**: cannot create. Token can only create unprivileged.
+2. **Feature flags**: only `nesting` allowed. `keyctl`, `fuse`, `mount`, etc. all require `root@pam`.
+3. **Device passthrough**: requires `root@pam`. Cannot configure `/dev/dri` etc. via token.
+
+Consequence: media LXC's iGPU passthrough for Jellyfin must happen out-of-band in a Phase 3 bootstrap step that SSHes to PVE as root and runs `pct set` directly (or edits `/etc/pve/lxc/<vmid>.conf`). Module is intentionally narrow.
+
+Other LXC notes:
+- Debian 12 LXC needs `features.nesting = true` because systemd 252 uses cgroup-v2 features blocked by default.
+- LXCs use **root** user (not ubuntu) for SSH — `ssh root@10.0.0.160`.
+- LXC's `ipv4_address` output trusts the configured static CIDR (no QGA inside LXC).
+
 Next: Phase 3 — Ansible base config (common role, k3s prereqs) + Phase 4 (k3s install).
 
 ## Conventions

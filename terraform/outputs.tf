@@ -1,3 +1,21 @@
+output "pihole" {
+  description = "Pi-hole LXC connection info"
+  value = {
+    vm_id        = module.pihole.vm_id
+    name         = module.pihole.name
+    ipv4_address = module.pihole.ipv4_address
+  }
+}
+
+output "media" {
+  description = "Media (Jellyfin) LXC connection info"
+  value = {
+    vm_id        = module.media.vm_id
+    name         = module.media.name
+    ipv4_address = module.media.ipv4_address
+  }
+}
+
 output "k3s_nodes" {
   description = "Map of node name -> connection info, ready for Ansible inventory"
   value = {
