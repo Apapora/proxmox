@@ -1,0 +1,31 @@
+---
+common_timezone: Asia/Taipei
+
+common_packages:
+  - curl
+  - wget
+  - vim
+  - git
+  - btop
+  - net-tools
+  - dnsutils
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - jq
+  - python3-pip
+  - unattended-upgrades
+
+# SSH hardening — keys only, no passwords
+common_ssh_config:
+  PermitRootLogin: prohibit-password
+  PasswordAuthentication: "no"
+  ChallengeResponseAuthentication: "no"
+  KbdInteractiveAuthentication: "no"
+  UsePAM: "yes"
+
+# Disable swap on all hosts. k3s requires it off on nodes; harmless elsewhere.
+common_disable_swap: true
+
+# Manage systemd-timesyncd. LXCs inherit host kernel clock — skip there.
+common_manage_ntp: true

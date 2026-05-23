@@ -1,0 +1,7 @@
+---
+# LXC root cannot manage host swap — it's a host-kernel resource outside the namespace.
+common_disable_swap: false
+
+# LXCs inherit the host kernel's clock; running their own NTP daemon is pointless
+# and reports "changed" every play.
+common_manage_ntp: false

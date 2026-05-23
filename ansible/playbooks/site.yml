@@ -1,0 +1,10 @@
+---
+- name: Baseline OS config on all hosts
+  hosts: all
+  roles:
+    - common
+
+- name: k3s prerequisites on cluster nodes
+  hosts: k3s_nodes
+  roles:
+    - k3s_prereq
