@@ -1,0 +1,4 @@
+---
+k3s_version: v1.36.1+k3s1
+k3s_install_url: https://get.k3s.io 
+k3s_server_url: https://{{ hostvars[groups['k3s_servers'][0]]['ansible_host'] }}:6443

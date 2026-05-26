@@ -1,0 +1,22 @@
+---
+- name: fetch kubeconfig
+  ansible.builtin.fetch:
+    src: "{{ kubeconfig_remote_path}}"
+    dest: "{{ kubeconfig_local_path}}"
+    flat: true
+
+
+- name: rewrite kubeconfig
+  ansible.builtin.replace:
+    path: "{{ kubeconfig_local_path }}"
+    regexp: "server: https://127.0.0.1:6443"
+    replace: "server: https://{{ hostvars[groups['k3s_servers'][0]]['ansible_host'] }}:6443"
+  delegate_to: localhost
+  become: false
+
+- name: lock kubeconfig
+  ansible.builtin.file:
+    path: "{{ kubeconfig_local_path }}"
+    mode: '0600'
+  delegate_to: localhost
+  become: false

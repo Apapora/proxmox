@@ -1,0 +1,30 @@
+---
+- name: k3s server config
+  hosts: k3s_servers
+  roles: 
+    - k3s_server
+  become: true
+
+- name: slurp k3s node token
+  hosts: k3s_servers
+  become: true
+  tasks:
+    - name: slurp
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_node_token_raw
+    - name: decode token
+      ansible.builtin.set_fact:
+        k3s_node_token: "{{ k3s_node_token_raw.content | b64decode | trim }}"
+
+- name: Config k3s agent
+  hosts: k3s_agents
+  become: true
+  roles:
+    - k3s_agent
+
+- name: kubeconfig
+  hosts: k3s_servers
+  roles:
+    - k3s_fetch_kubeconfig
+  become: true
