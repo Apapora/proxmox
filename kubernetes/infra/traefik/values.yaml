@@ -1,0 +1,35 @@
+providers:
+  kubernetesIngress:
+    enabled: false
+  kubernetesCRD:
+    enabled: false
+  kubernetesGateway:
+    enabled: true
+
+ingressClass:
+  enabled: false
+
+gateway:
+  enabled: true
+  name: "traefik-gateway"
+  listeners:
+    web:
+      namespacePolicy:
+        from: All
+
+service:
+  annotations:
+    metallb.io/loadBalancerIPs: 10.0.0.200
+    metallb.io/address-pool: homelab-pool
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+logs:
+  access:
+    enabled: true
