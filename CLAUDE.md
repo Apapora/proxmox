@@ -112,7 +112,58 @@ Other LXC notes:
 - LXCs use **root** user (not ubuntu) for SSH — `ssh root@10.0.0.160`.
 - LXC's `ipv4_address` output trusts the configured static CIDR (no QGA inside LXC).
 
-Next: Phase 3 — Ansible base config (common role, k3s prereqs) + Phase 4 (k3s install).
+## Phase 3 status — Ansible base config ✓
+
+- `ansible/inventory/hosts.yml` — static inventory: groups `k3s_servers`, `k3s_agents`, `k3s_nodes` (children of prior two), `lxcs`. VMs use `ansible_user: ubuntu`, LXCs use `ansible_user: root`.
+- `ansible/roles/common` + `ansible/roles/k3s_prereq` — applied to all 5 hosts. Idempotent.
+
+## Phase 4 status — k3s cluster + core platform
+
+### k3s install ✓
+
+Hand-rolled Ansible (chosen over k3sup / xanmanning.k3s for portfolio signal).
+
+- `ansible/playbooks/k3s.yml` — 4 plays: server install → slurp+decode node token → agent install → fetch kubeconfig.
+- `ansible/roles/k3s_server` — installs server. Args: `--disable=traefik --disable=servicelb --write-kubeconfig-mode=0644`. Mode 0644 on server's kubeconfig lets fetch role read as ubuntu user without sudo dance (homelab tradeoff: kubeconfig readable by all local users on server — fine).
+- `ansible/roles/k3s_agent` — joins agents. Pulls token via `hostvars[groups['k3s_servers'][0]].k3s_node_token`. Server URL computed from `hostvars[...]['ansible_host']`.
+- `ansible/roles/k3s_fetch_kubeconfig` — fetches `/etc/rancher/k3s/k3s.yaml` to `~/.kube/config-homelab`, rewrites `server: https://127.0.0.1:6443` → real server IP. Two delegated tasks (`replace`, `file`) need `delegate_to: localhost` + `become: false` (file lives on workstation after fetch).
+- Version pin: **v1.36.1+k3s1** (server + agent must match exactly — skew = agent refuses join).
+- Cluster live: 3 nodes Ready (k3s-server-1 control-plane, k3s-agent-1, k3s-agent-2).
+
+Lessons:
+1. `creates:` guard on the shell install task means changing `INSTALL_K3S_EXEC` after first install doesn't trigger re-run. Toggle flags later by hand-editing `/etc/systemd/system/k3s.service` ExecStart + `systemctl daemon-reload && restart`, or re-run install script directly (it regenerates the unit).
+2. `delegate_to:` is task-level (sibling of `name:`), not nested under module args.
+3. ServiceLB (klipper-lb) was originally enabled. Disabled later to make room for MetalLB. Two ways to disable post-install: hand-edit unit (transparent) or re-run install script with new `INSTALL_K3S_EXEC`.
+
+### MetalLB ✓
+
+Provides external IPs for `Service type: LoadBalancer` on bare metal.
+
+- Helm chart `metallb/metallb` in namespace `metallb-system`.
+- FRR-K8s disabled (`--set speaker.frr.enabled=false --set frrk8s.enabled=false`) — L2 mode only, no BGP. Drops ~4 extra pods.
+- `kubernetes/infra/metallb/ipaddresspool.yaml` — pool `homelab-pool`, range `10.0.0.200-10.0.0.220`.
+- `kubernetes/infra/metallb/l2advertisement.yaml` — L2 advertisement covering the pool.
+- Validated with throwaway nginx Deployment + Service type LoadBalancer → got pool IP → curl returned welcome page → cleaned up.
+
+Why L2 not BGP: Nighthawk X8 (stock firmware) has no BGP. L2 with elected speaker responding to ARP is sufficient for homelab; tradeoff = single-node bottleneck per IP (failover, not real load distribution).
+
+Router DHCP narrowed to `10.0.0.2-10.0.0.100` to leave room for static + MetalLB pool above `.100`.
+
+### Gateway API CRDs ✓
+
+Standard `Ingress` resource is frozen (no new features). Gateway API is the successor. CRDs installed from `kubernetes-sigs/gateway-api` standard install manifest. Resources available: `GatewayClass`, `Gateway`, `HTTPRoute`, etc.
+
+Decision: use Gateway API (`HTTPRoute`) for all routing going forward. Skip legacy `Ingress`. Skip Traefik-specific `IngressRoute` (locks to one controller; Gateway API is portable across Traefik, Envoy Gateway, Cilium, Istio, etc.).
+
+### Traefik — in progress
+
+Plan: Helm install with `providers.kubernetesGateway.enabled=true`, others off. Pin LB IP `10.0.0.200` via MetalLB annotation. Dashboard off, port-forward when needed. Layout: `kubernetes/infra/traefik/values.yaml` + `gateway.yaml`.
+
+### Pending
+
+- cert-manager (LE TLS for Gateway listeners; DNS-01 via Cloudflare API likely)
+- Cloudflare Tunnel + first workload (static site per Phase 4.5 plan in memory)
+- n8n with webhooks accessible externally via same Cloudflare Tunnel pattern
 
 ## Conventions
 

@@ -16,6 +16,14 @@ gateway:
     web:
       namespacePolicy:
         from: All
+    websecure:
+      port: 8443
+      protocol: HTTPS
+      namespacePolicy:
+        from: All
+      certificateRefs:
+        - name: traefik-wildcard-tls
+          kind: Secret
 
 service:
   annotations:
