@@ -82,6 +82,31 @@ module "media" {
   description = "Jellyfin LXC. Convert to privileged + attach /dev/dri post-create."
 }
 
+module "ollama" {
+  source = "./modules/lxc"
+
+  name             = "ollama"
+  template_file_id = local.debian_12_template
+
+  # CPU-only inference. iGPU passthrough deliberately skipped:
+  cpus         = 6
+  memory_mb    = 12288
+  disk_size_gb = 30
+
+  ip_address = "10.0.0.162/24"
+  gateway    = "10.0.0.1"
+
+  ssh_public_keys = [var.ssh_public_key]
+
+  unprivileged = true
+  features = {
+    nesting = true
+  }
+
+  tags        = ["ollama", "llm", "ai", "lxc", "terraform"]
+  description = "Ollama LLM server (CPU-only)."
+}
+
 module "k3s_nodes" {
   source   = "./modules/vm"
   for_each = local.k3s_nodes

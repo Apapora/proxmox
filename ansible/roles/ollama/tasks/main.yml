@@ -1,0 +1,52 @@
+---
+- name: install prereqs
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - zstd
+    state: present
+    update_cache: true
+
+- name: install Ollama
+  ansible.builtin.shell: |
+    curl -fsSL https://ollama.com/install.sh | sh
+  args:
+    creates: /usr/local/bin/ollama
+
+- name: ensure systemd drop-in dir exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/ollama.service.d
+    state: directory
+    mode: "0755"
+
+- name: configure Ollama listen address + keep-alive
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/ollama.service.d/override.conf
+    mode: "0644"
+    content: |
+      [Service]
+      Environment="OLLAMA_HOST={{ ollama_host }}"
+      Environment="OLLAMA_KEEP_ALIVE={{ ollama_keep_alive }}"
+  notify: restart ollama
+
+- name: flush handlers so service restarts before model pulls
+  ansible.builtin.meta: flush_handlers
+
+- name: ensure Ollama running + enabled
+  ansible.builtin.systemd:
+    name: ollama
+    state: started
+    enabled: true
+
+- name: list installed models
+  ansible.builtin.command: ollama list
+  register: ollama_list
+  changed_when: false
+
+- name: pull models
+  ansible.builtin.command: "ollama pull {{ item }}"
+  loop: "{{ ollama_models }}"
+  when: item not in ollama_list.stdout
+  register: ollama_pull
+  changed_when: "'pulling' in ollama_pull.stdout or 'success' in ollama_pull.stdout"

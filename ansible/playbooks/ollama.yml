@@ -1,0 +1,6 @@
+---
+- name: install + configure Ollama
+  hosts: ollama
+  roles:
+    - common
+    - ollama

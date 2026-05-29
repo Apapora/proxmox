@@ -1,0 +1,15 @@
+---
+# Bind to all interfaces so n8n (in k3s) and the workstation can reach it.
+# Default Ollama binds 127.0.0.1 only — unreachable from off-box.
+ollama_host: "0.0.0.0:11434"
+
+# Keep a model resident this long after last use, so kitchen calls skip the
+# multi-second cold load. CPU-only inference makes reloads especially costly.
+ollama_keep_alive: "30m"
+
+# Single model for all tasks — parse, recipe gen, and vision (receipt/barcode).
+# qwen3.5 = multimodal MoE; 9b (~6.6GB) stays comfortably resident in the 12GB
+# LXC with context headroom, and one-model-only means no RAM contention.
+# Split to a smaller parse model (e.g. qwen3.5:4b) later only if latency annoys.
+ollama_models:
+  - qwen3.5:9b

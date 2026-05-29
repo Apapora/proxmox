@@ -16,6 +16,15 @@ output "media" {
   }
 }
 
+output "ollama" {
+  description = "Ollama LXC connection info"
+  value = {
+    vm_id        = module.ollama.vm_id
+    name         = module.ollama.name
+    ipv4_address = module.ollama.ipv4_address
+  }
+}
+
 output "k3s_nodes" {
   description = "Map of node name -> connection info, ready for Ansible inventory"
   value = {
