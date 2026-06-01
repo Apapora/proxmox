@@ -51,7 +51,8 @@ id_ed25519*
 .env
 .env.*
 !.env.example
-kubernetes/infra/cert-manager/cloudflare-secret.yaml
+kubernetes/**/**/*secrets.yaml
+kubernetes/**/**/*secret.yaml
 
 
 # direnv — contains secrets, never commit
