@@ -23,6 +23,10 @@ spec:
         - name: immich-server
           image: ghcr.io/immich-app/immich-server:release
           env:
+            - name: REDIS_PORT
+              value: "6379"
+            - name: DB_PORT
+              value: "5432"
             - name: DB_HOSTNAME
               value: postgres.immich.svc.cluster.local
             - name: DB_USERNAME
