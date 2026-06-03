@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nocodb
+  namespace: nocodb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nocodb
+  template:
+    metadata:
+      labels:
+        app: nocodb
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: nocodb-data
+      containers:
+        - name: nocodb
+          image: nocodb/nocodb:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PG_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: nocodb-secrets
+                  key: postgres-password
+            - name: NC_DB
+              value: "pg://postgres.nocodb.svc.cluster.local:5432?u=nocodb&p=$(PG_PASS)&d=nocodb"
+            - name: NC_AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: nocodb-secrets
+                  key: jwt-secret
+            - name: NC_PUBLIC_URL
+              value: https://nocodb.chad-johnston.com
+            - name: NC_DISABLE_TELE
+              value: "true"
+            - name: TZ
+              value: America/Los_Angeles
+          volumeMounts:
+            - name: data
+              mountPath: /usr/app/data
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nocodb
+  namespace: nocodb
+spec:
+  selector:
+    app: nocodb
+  ports:
+    - port: 8080
+      targetPort: 8080
