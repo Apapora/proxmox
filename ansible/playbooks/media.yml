@@ -1,0 +1,8 @@
+---
+- name: install + configure media LXC (Plex + Docker + torrents)
+  hosts: media
+  roles:
+    - common
+    - plex
+    - docker
+    - torrents

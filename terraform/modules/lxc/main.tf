@@ -57,4 +57,14 @@ resource "proxmox_virtual_environment_container" "this" {
   features {
     nesting = var.features.nesting
   }
+
+  dynamic "mount_point" {
+    for_each = var.mount_points
+    content {
+      volume = mount_point.value.volume
+      size   = mount_point.value.size
+      path   = mount_point.value.path
+      backup = mount_point.value.backup
+    }
+  }
 }

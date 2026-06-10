@@ -1,0 +1,36 @@
+---
+# Stack lives under /opt/torrents on the LXC. Compose file + .env file.
+torrents_stack_dir: "/opt/torrents"
+
+# Where qBittorrent stores app state (config, settings, torrent metadata).
+# Lives on rootfs (small footprint).
+torrents_qbit_config_dir: "/opt/torrents/qbit-config"
+
+# Where actual download data lives. On the big /srv/media mount.
+torrents_downloads_root: "/srv/media/downloads"
+
+# gluetun config
+gluetun_image: "qmcgaw/gluetun:latest"
+gluetun_vpn_provider: "nordvpn"
+gluetun_vpn_type: "openvpn"
+# Restrict Nord server pool by country. gluetun picks best by load within set.
+# APAC pinning for lower latency from Taipei. Trade vs privacy-friendly EU
+# jurisdictions (Switzerland, Netherlands) — if torrent risk profile rises,
+# switch back to EU exits at the cost of higher RTT.
+gluetun_server_countries: "Taiwan"
+gluetun_dns_address: "1.1.1.1"
+
+# qBittorrent
+qbittorrent_image: "lscr.io/linuxserver/qbittorrent:latest"
+qbittorrent_webui_port: 8080
+qbittorrent_listen_port: 6881
+# linuxserver.io images run their processes as PUID:PGID. 1000:1000 standard.
+qbittorrent_puid: 1000
+qbittorrent_pgid: 1000
+
+# Pulled from workstation env at playbook time via lookup('env', ...).
+# Add to .envrc:
+#   export NORDVPN_OPENVPN_USER="..."
+#   export NORDVPN_OPENVPN_PASSWORD="..."
+nord_openvpn_user: "{{ lookup('env', 'NORDVPN_OPENVPN_USER') }}"
+nord_openvpn_password: "{{ lookup('env', 'NORDVPN_OPENVPN_PASSWORD') }}"

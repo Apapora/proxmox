@@ -1,0 +1,15 @@
+auto lo
+iface lo inet loopback
+
+iface nic0 inet manual
+
+auto vmbr0
+iface vmbr0 inet dhcp
+	bridge-ports nic0
+	bridge-stp off
+	bridge-fd 0
+
+iface nic1 inet manual
+
+
+source /etc/network/interfaces.d/*

@@ -117,6 +117,23 @@ variable "device_passthrough" {
   default = []
 }
 
+variable "mount_points" {
+  description = <<-EOT
+    Additional volume mount points (separate LVs from rootfs).
+    Each entry creates a thin LV in `volume` storage at the given `size`,
+    formats it ext4, and bind-mounts it at `path` inside the LXC.
+    `backup = false` is the right default for bulk-data volumes (media,
+    photos) where dumping multi-GB content into vzdump is pointless.
+  EOT
+  type = list(object({
+    volume = string                # storage id (e.g. "local-lvm")
+    size   = string                # e.g. "500G"
+    path   = string                # in-container mount path (e.g. "/srv/media")
+    backup = optional(bool, false) # include in vzdump backups
+  }))
+  default = []
+}
+
 variable "tags" {
   description = "PVE tags"
   type        = list(string)

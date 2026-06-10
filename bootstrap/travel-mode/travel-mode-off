@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# travel-mode-off — restore home network configuration after a trip.
+#
+# What it does:
+#   1. Restores static /etc/network/interfaces (10.0.0.19/24)
+#   2. Reconfigures media LXC (104) back to static 10.0.0.161/24
+#   3. Re-enables onboot for k3s VMs + pihole + ollama LXCs
+#   4. Reboots the host (cleanest restart of networking + autostart chain)
+#
+# Run from an SSH session you don't mind losing — host reboots at the end.
+
+set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Must run as root." >&2
+  exit 1
+fi
+
+STATE_FILE="/var/lib/travel-mode/state"
+
+# Pre-flight: required files exist
+for f in /usr/local/share/travel-mode/interfaces.home; do
+  [[ -r "$f" ]] || { echo "Missing $f. Run install.sh from workstation."; exit 1; }
+done
+
+K3S_VMS=(100 101 102)
+RESTART_LXCS=(103 105)
+MEDIA_LXC=104
+
+echo "==> Restoring static /etc/network/interfaces"
+cp -a /etc/network/interfaces /etc/network/interfaces.bak.$(date +%s)
+install -m 0644 /usr/local/share/travel-mode/interfaces.home /etc/network/interfaces
+
+echo "==> Restoring media LXC static IP 10.0.0.161/24"
+if pct status "$MEDIA_LXC" 2>/dev/null | grep -q running; then
+  pct shutdown "$MEDIA_LXC" --timeout 30 || pct stop "$MEDIA_LXC"
+fi
+pct set "$MEDIA_LXC" --net0 name=eth0,bridge=vmbr0,gw=10.0.0.1,ip=10.0.0.161/24 >/dev/null
+pct set "$MEDIA_LXC" --onboot 1 >/dev/null
+
+echo "==> Re-enabling onboot on k3s VMs"
+for vmid in "${K3S_VMS[@]}"; do
+  qm set "$vmid" --onboot 1 >/dev/null
+done
+
+echo "==> Re-enabling onboot on pihole + ollama LXCs"
+for vmid in "${RESTART_LXCS[@]}"; do
+  pct set "$vmid" --onboot 1 >/dev/null
+done
+
+echo "home" > "$STATE_FILE"
+
+cat <<'EOF'
+
+==============================================================
+ HOME MODE STAGED. Rebooting in 5s...
+
+ After reboot:
+   - host at 10.0.0.19
+   - media LXC at 10.0.0.161 (Plex auto-starts)
+   - pihole/ollama LXCs come up
+   - k3s VMs come up (cluster reforms)
+
+ Note: torrent compose stack must be started manually:
+   ssh root@10.0.0.161 \
+     'cd /opt/torrents && docker compose up -d'
+==============================================================
+EOF
+
+sleep 5
+systemctl reboot

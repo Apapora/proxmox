@@ -1,0 +1,65 @@
+# Managed by Ansible. Edits will be overwritten.
+# gluetun = VPN gateway. qbittorrent joins gluetun's network namespace,
+# so all its traffic egresses through the VPN tunnel. If gluetun dies
+# or VPN drops, qbit has no network — kill-switch via shared netns.
+
+services:
+  gluetun:
+    image: {{ gluetun_image }}
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      # qBittorrent WebUI is exposed via gluetun's netns. Map host:gluetun.
+      - "{{ qbittorrent_webui_port }}:{{ qbittorrent_webui_port }}"
+      # BitTorrent listen port (TCP+UDP). Nord doesn't forward, so inbound
+      # connectivity is best-effort. Still publish so peer announcements work
+      # for local-LAN testing scenarios.
+      - "{{ qbittorrent_listen_port }}:{{ qbittorrent_listen_port }}/tcp"
+      - "{{ qbittorrent_listen_port }}:{{ qbittorrent_listen_port }}/udp"
+    environment:
+      VPN_SERVICE_PROVIDER: "{{ gluetun_vpn_provider }}"
+      VPN_TYPE: "{{ gluetun_vpn_type }}"
+      OPENVPN_USER: "${NORDVPN_OPENVPN_USER}"
+      OPENVPN_PASSWORD: "${NORDVPN_OPENVPN_PASSWORD}"
+      SERVER_COUNTRIES: "{{ gluetun_server_countries }}"
+      # Gluetun's hardened DNS-over-TLS resolver; prevents DNS leaks even if
+      # qbit tries the host's resolver.
+      DOT: "on"
+      DOT_PROVIDERS: "cloudflare"
+      # Block all outbound except VPN tunnel — kill switch.
+      FIREWALL: "on"
+      # Allow LAN -> gluetun for qBit WebUI access from your workstation.
+      FIREWALL_INPUT_PORTS: "{{ qbittorrent_webui_port }}"
+      FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/24"
+      TZ: "Asia/Taipei"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- https://api.ipify.org > /tmp/myip && [ -s /tmp/myip ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  qbittorrent:
+    image: {{ qbittorrent_image }}
+    container_name: qbittorrent
+    restart: unless-stopped
+    # Share gluetun's network namespace. qBit has no own network stack;
+    # all packets go through the VPN tunnel or get blocked by gluetun's
+    # firewall. This is the kill switch.
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "{{ qbittorrent_puid }}"
+      PGID: "{{ qbittorrent_pgid }}"
+      TZ: "Asia/Taipei"
+      WEBUI_PORT: "{{ qbittorrent_webui_port }}"
+      TORRENTING_PORT: "{{ qbittorrent_listen_port }}"
+    volumes:
+      - {{ torrents_qbit_config_dir }}:/config
+      # Downloads land here. Subdirs movies/, tv/, incomplete/.
+      - {{ torrents_downloads_root }}:/downloads

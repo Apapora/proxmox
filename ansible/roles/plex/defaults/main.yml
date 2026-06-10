@@ -1,0 +1,18 @@
+---
+# Plex official Debian repo. Single source of truth for both apt source
+# and GPG key (key lives at <repo>/PlexSign.key on this URL).
+plex_repo_url: "https://downloads.plex.tv/repo/deb"
+plex_repo_components: "public main"
+plex_gpg_key_url: "https://downloads.plex.tv/plex-keys/PlexSign.key"
+
+# Bulk-content mount (created by the LXC mount_point in terraform).
+# Plex libraries point at subdirs of this.
+plex_media_root: "/srv/media"
+plex_media_subdirs:
+  - movies
+  - tv
+  - music
+
+# Unix user/group the plexmediaserver package creates and the service runs as.
+plex_user: plex
+plex_group: plex

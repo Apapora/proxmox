@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# travel-mode-on — prepare the host to be unplugged from home LAN and
+# brought up on a foreign network (friend's house, hotel, etc.).
+#
+# What it does:
+#   1. Stops the torrent compose stack on media LXC (politeness on alien LAN)
+#   2. Shuts down k3s VMs (100/101/102), pihole LXC (103), ollama LXC (105)
+#   3. Sets onboot=0 on those so they don't autostart on alien network
+#   4. Reconfigures media LXC (104) network to DHCP
+#   5. Swaps PVE host /etc/network/interfaces to DHCP variant
+#
+# After this script:
+#   - `poweroff` the host
+#   - unplug, transport, plug into target router, power on
+#   - host comes up on whatever DHCP gives, only media LXC running
+#   - Plex announces new IP to plex.tv; clients re-discover automatically
+#
+# Reverse via `travel-mode-off` once home.
+
+set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Must run as root." >&2
+  exit 1
+fi
+
+STATE_FILE="/var/lib/travel-mode/state"
+CONF_HOME="/etc/pve/local/interfaces.home"
+CONF_TRAVEL="/etc/pve/local/interfaces.travel"
+
+# Pre-flight: required files exist
+for f in /usr/local/share/travel-mode/interfaces.home /usr/local/share/travel-mode/interfaces.travel; do
+  [[ -r "$f" ]] || { echo "Missing $f. Run install.sh from workstation."; exit 1; }
+done
+
+mkdir -p /var/lib/travel-mode
+
+# IDs of VMs/LXCs to halt on travel. Media LXC (104) is the only one we keep.
+K3S_VMS=(100 101 102)
+HALT_LXCS=(103 105)
+MEDIA_LXC=104
+
+echo "==> Stopping torrent compose stack inside media LXC"
+if pct status "$MEDIA_LXC" 2>/dev/null | grep -q running; then
+  pct exec "$MEDIA_LXC" -- bash -c \
+    'cd /opt/torrents && docker compose down 2>/dev/null || true'
+else
+  echo "    media LXC not running, skipping torrent stop"
+fi
+
+echo "==> Shutting down k3s VMs (qm shutdown)"
+for vmid in "${K3S_VMS[@]}"; do
+  if qm status "$vmid" 2>/dev/null | grep -q running; then
+    echo "    qm shutdown $vmid"
+    qm shutdown "$vmid" --timeout 60 || qm stop "$vmid"
+  fi
+  echo "    qm set $vmid --onboot 0"
+  qm set "$vmid" --onboot 0 >/dev/null
+done
+
+echo "==> Shutting down pihole + ollama LXCs"
+for vmid in "${HALT_LXCS[@]}"; do
+  if pct status "$vmid" 2>/dev/null | grep -q running; then
+    echo "    pct shutdown $vmid"
+    pct shutdown "$vmid" --timeout 30 || pct stop "$vmid"
+  fi
+  echo "    pct set $vmid --onboot 0"
+  pct set "$vmid" --onboot 0 >/dev/null
+done
+
+echo "==> Reconfiguring media LXC to DHCP"
+# Stop, change net config, leave stopped — will start after host reboot.
+if pct status "$MEDIA_LXC" 2>/dev/null | grep -q running; then
+  pct shutdown "$MEDIA_LXC" --timeout 30 || pct stop "$MEDIA_LXC"
+fi
+pct set "$MEDIA_LXC" --net0 name=eth0,bridge=vmbr0,ip=dhcp >/dev/null
+pct set "$MEDIA_LXC" --onboot 1 >/dev/null
+
+echo "==> Snapshotting current /etc/network/interfaces -> .home.bak"
+cp -a /etc/network/interfaces /etc/network/interfaces.home.bak.$(date +%s)
+
+echo "==> Installing travel /etc/network/interfaces (DHCP)"
+install -m 0644 /usr/local/share/travel-mode/interfaces.travel /etc/network/interfaces
+
+echo "travel" > "$STATE_FILE"
+
+cat <<'EOF'
+
+==============================================================
+ TRAVEL MODE STAGED.
+
+ Next steps (in order):
+   1. poweroff
+   2. unplug ethernet, transport host
+   3. plug into target router's LAN port
+   4. power on
+
+ At target site:
+   - host gets DHCP from foreign router
+   - media LXC (104) autostarts on boot, also DHCP
+   - Plex announces new IP to plex.tv
+   - Apple TV 4K client re-discovers server via your Plex account
+
+ NOTE: you will lose the static .19 SSH alias. Find the new IP
+ via the target router admin UI, mDNS (pve.local), or arp-scan.
+
+ To reverse once home: power on, find new home-DHCP IP, run
+   ssh root@<new-ip> travel-mode-off
+==============================================================
+EOF

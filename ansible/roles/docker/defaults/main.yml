@@ -1,0 +1,12 @@
+---
+docker_repo_url: "https://download.docker.com/linux/debian"
+docker_gpg_key_url: "https://download.docker.com/linux/debian/gpg"
+docker_apt_components: "stable"
+
+# Pinning to a major series. Bump deliberately.
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin

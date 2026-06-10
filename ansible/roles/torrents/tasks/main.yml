@@ -1,0 +1,63 @@
+---
+- name: refuse to run with empty Nord creds
+  ansible.builtin.assert:
+    that:
+      - nord_openvpn_user | length > 0
+      - nord_openvpn_password | length > 0
+    fail_msg: >-
+      NORDVPN_OPENVPN_USER and NORDVPN_OPENVPN_PASSWORD must be set in the
+      workstation environment (.envrc + direnv) before running this role.
+      Grab them from Nord dashboard -> Services -> NordVPN -> manual setup.
+
+- name: ensure stack dir exists
+  ansible.builtin.file:
+    path: "{{ torrents_stack_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: ensure qBittorrent config dir exists
+  ansible.builtin.file:
+    path: "{{ torrents_qbit_config_dir }}"
+    state: directory
+    owner: "{{ qbittorrent_puid }}"
+    group: "{{ qbittorrent_pgid }}"
+    mode: "0755"
+
+- name: ensure download subdirs exist
+  ansible.builtin.file:
+    path: "{{ torrents_downloads_root }}/{{ item }}"
+    state: directory
+    owner: "{{ qbittorrent_puid }}"
+    group: "{{ qbittorrent_pgid }}"
+    mode: "0775"
+  loop:
+    - movies
+    - tv
+    - incomplete
+
+- name: render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ torrents_stack_dir }}/docker-compose.yml"
+    mode: "0640"
+  register: compose_rendered
+
+- name: render .env with Nord creds (mode 0600, no logs)
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ torrents_stack_dir }}/.env"
+    mode: "0600"
+  no_log: true
+  register: env_rendered
+
+- name: bring stack up (pulls images on first run)
+  community.docker.docker_compose_v2:
+    project_src: "{{ torrents_stack_dir }}"
+    state: present
+  register: compose_up
+
+- name: restart stack if compose or env changed
+  community.docker.docker_compose_v2:
+    project_src: "{{ torrents_stack_dir }}"
+    state: restarted
+  when: (compose_rendered.changed or env_rendered.changed) and not compose_up.changed

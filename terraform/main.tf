@@ -78,8 +78,21 @@ module "media" {
     nesting = true
   }
 
-  tags        = ["media", "jellyfin", "lxc", "terraform"]
-  description = "Jellyfin LXC. Convert to privileged + attach /dev/dri post-create."
+  # 600G thin LV for movies/series. Sparse — actual NVMe usage tracks
+  # real content size, not declared. backup=false because vzdump'ing
+  # multi-TB media into local backup storage is pointless; media is
+  # reproducible from source media or external archive.
+  mount_points = [
+    {
+      volume = "local-lvm"
+      size   = "600G"
+      path   = "/srv/media"
+      backup = false
+    },
+  ]
+
+  tags        = ["media", "plex", "lxc", "terraform"]
+  description = "Plex Media Server LXC. Direct-play target for UHD REMUX via Apple TV 4K."
 }
 
 module "ollama" {
@@ -89,7 +102,7 @@ module "ollama" {
   template_file_id = local.debian_12_template
 
   # CPU-only inference. iGPU passthrough deliberately skipped:
-  cpus         = 6
+  cpus         = 8
   memory_mb    = 12288
   disk_size_gb = 30
 

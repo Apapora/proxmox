@@ -1,0 +1,48 @@
+---
+- name: install prereqs
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - apt-transport-https
+    state: present
+    update_cache: true
+
+- name: ensure keyring dir exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: install Docker GPG signing key
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL {{ docker_gpg_key_url }} | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  args:
+    creates: /etc/apt/keyrings/docker.gpg
+    executable: /bin/bash
+
+- name: add Docker apt repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/docker.list
+    mode: "0644"
+    content: |
+      deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ docker_repo_url }} {{ ansible_distribution_release }} {{ docker_apt_components }}
+  register: docker_repo_added
+
+- name: refresh apt cache when repo changed
+  ansible.builtin.apt:
+    update_cache: true
+  when: docker_repo_added.changed
+
+- name: install Docker engine + compose plugin
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+
+- name: ensure docker service running + enabled
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true

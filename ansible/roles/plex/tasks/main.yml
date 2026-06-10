@@ -1,0 +1,72 @@
+---
+- name: install prereqs
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg
+      - apt-transport-https
+    state: present
+    update_cache: true
+
+- name: ensure keyring dir exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+# apt-key is deprecated since Debian 11. Modern pattern:
+# fetch the ASCII-armored key, dearmor to /etc/apt/keyrings, then
+# reference it from the sources list via signed-by=.
+- name: install Plex GPG signing key
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL {{ plex_gpg_key_url }} | gpg --dearmor -o /etc/apt/keyrings/plex.gpg
+  args:
+    creates: /etc/apt/keyrings/plex.gpg
+    executable: /bin/bash
+
+- name: add Plex apt repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/plexmediaserver.list
+    mode: "0644"
+    content: |
+      deb [signed-by=/etc/apt/keyrings/plex.gpg] {{ plex_repo_url }} {{ plex_repo_components }}
+  register: plex_repo_added
+
+- name: refresh apt cache when repo changed
+  ansible.builtin.apt:
+    update_cache: true
+  when: plex_repo_added.changed
+
+- name: install plexmediaserver
+  ansible.builtin.apt:
+    name: plexmediaserver
+    state: present
+  notify: restart plexmediaserver
+
+- name: create media library subdirs
+  ansible.builtin.file:
+    path: "{{ plex_media_root }}/{{ item }}"
+    state: directory
+    owner: "{{ plex_user }}"
+    group: "{{ plex_group }}"
+    mode: "0775"
+  loop: "{{ plex_media_subdirs }}"
+
+# Mount root itself was created by PVE as root:root inside an unprivileged
+# LXC and may show as nobody:nogroup. Re-own to plex so the service can
+# scan + watch for new content drops.
+- name: ensure media root owned by plex
+  ansible.builtin.file:
+    path: "{{ plex_media_root }}"
+    state: directory
+    owner: "{{ plex_user }}"
+    group: "{{ plex_group }}"
+    mode: "0775"
+
+- name: ensure plexmediaserver running + enabled
+  ansible.builtin.systemd:
+    name: plexmediaserver
+    state: started
+    enabled: true
