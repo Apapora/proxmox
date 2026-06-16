@@ -1,0 +1,19 @@
+# Dedicated NFS StorageClass for paperless, backed by the PVE export
+# /data/paperless (added to /etc/exports for the 3 k3s nodes).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-paperless
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: 10.0.0.19
+  share: /data/paperless
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+mountOptions:
+  - nfsvers=4.1
+  - hard
+  - timeo=600
+  - retrans=2
+  - noresvport

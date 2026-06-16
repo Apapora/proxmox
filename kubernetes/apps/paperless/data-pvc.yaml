@@ -1,0 +1,14 @@
+# Paperless "data" = search index, classification models, logs. Rebuildable
+# from documents, but NFS-backed so it survives a node move like the media.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-data
+  namespace: paperless
+spec:
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-paperless
+  accessModes:
+    - ReadWriteOnce

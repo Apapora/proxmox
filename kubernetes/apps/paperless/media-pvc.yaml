@@ -1,0 +1,14 @@
+# Paperless "media" = the actual stored documents (originals + archived OCR
+# PDFs). The irreplaceable data. NFS-backed + Retain SC = durable.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-media
+  namespace: paperless
+spec:
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: nfs-paperless
+  accessModes:
+    - ReadWriteOnce
