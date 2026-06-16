@@ -15,6 +15,11 @@ spec:
       labels:
         app: paperless
     spec:
+      # k8s injects Docker-legacy <SVC>_PORT env vars for every Service. The
+      # `paperless` Service would set PAPERLESS_PORT=tcp://<ip>:8000, which
+      # paperless-ngx misreads as its gunicorn listen port → crash. Disabling
+      # service links drops that whole legacy-env class. (cf. immich REDIS/DB_PORT.)
+      enableServiceLinks: false
       containers:
         - name: paperless
           image: ghcr.io/paperless-ngx/paperless-ngx:2.14
