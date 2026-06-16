@@ -1,0 +1,28 @@
+---
+# Where the compose project + .env live on the LXC.
+hermes_stack_dir: /opt/hermes
+
+# Bind-mounted to /opt/data inside the container. Holds ALL state:
+# config.yaml, .env, sessions/, skills/, memories/, and home/ (the HOME for
+# tool subprocesses — this is where Claude Code's OAuth token persists, so it
+# survives container recreation because the whole dir is a host bind mount).
+hermes_data_dir: /opt/hermes/data
+
+hermes_image: "nousresearch/hermes-agent:latest"
+
+# The image drops to this non-root user (s6-overlay s6-setuidgid). The host
+# data dir must be writable by it, so we chown the dir to match.
+hermes_uid: 10000
+hermes_gid: 10000
+
+hermes_gateway_port: 8642     # OpenAI-compatible gateway API
+hermes_dashboard_port: 9119   # web dashboard
+hermes_dashboard_enabled: false   # control via Discord instead; no LAN-exposed web UI
+
+# Brain model API key. Value lives in .envrc (gitignored), injected by direnv;
+# Renders into /opt/hermes/.env (0600) so the container can reference ${DEEPSEEK_API_KEY} from config.yaml.
+hermes_deepseek_api_key: "{{ lookup('env', 'DEEPSEEK_API_KEY') }}"
+
+# Discord control plane. Pointers only — values live in .envrc (gitignored).
+hermes_discord_bot_token: "{{ lookup('env', 'DISCORD_BOT_TOKEN') }}"
+hermes_discord_allowed_users: "{{ lookup('env', 'DISCORD_ALLOWED_USERS') }}"

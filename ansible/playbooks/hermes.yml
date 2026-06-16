@@ -1,0 +1,13 @@
+---
+# Deploy the Hermes Agent as a Docker container on the hermes LXC.
+#
+#   ansible-playbook -i inventory/hosts.yml playbooks/hermes.yml
+#
+# `docker` role installs the engine + compose plugin; `hermes` role renders the
+# compose project and (once the setup wizard has run) brings the gateway up.
+- name: Deploy Hermes Agent
+  hosts: hermes
+  become: true
+  roles:
+    - docker
+    - hermes

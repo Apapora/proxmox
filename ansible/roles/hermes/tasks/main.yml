@@ -1,0 +1,59 @@
+---
+# Hermes Agent — Docker deployment.
+# Assumes the `docker` role ran first (engine + compose plugin present).
+# Native install is gone; the image carries hermes + its Python/Node/Playwright.
+
+- name: ensure stack dir exists
+  ansible.builtin.file:
+    path: "{{ hermes_stack_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: ensure data dir exists (owned by the container's runtime uid)
+  ansible.builtin.file:
+    path: "{{ hermes_data_dir }}"
+    state: directory
+    owner: "{{ hermes_uid }}"
+    group: "{{ hermes_gid }}"
+    mode: "0750"
+
+- name: render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ hermes_stack_dir }}/docker-compose.yml"
+    mode: "0644"
+  register: hermes_compose
+
+- name: render .env (mode 0600, never logged)
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ hermes_stack_dir }}/.env"
+    mode: "0600"
+  no_log: true
+
+# The gateway needs config.yaml, which only the one-time interactive `setup`
+# wizard creates. Don't try to start it before that exists, or it crash-loops.
+- name: check whether the setup wizard has run (config.yaml present)
+  ansible.builtin.stat:
+    path: "{{ hermes_data_dir }}/config.yaml"
+  register: hermes_config
+
+- name: bring the gateway up (only once configured)
+  community.docker.docker_compose_v2:
+    project_src: "{{ hermes_stack_dir }}"
+    state: present
+  when: hermes_config.stat.exists
+
+- name: restart gateway if compose changed
+  community.docker.docker_compose_v2:
+    project_src: "{{ hermes_stack_dir }}"
+    state: restarted
+  when: hermes_config.stat.exists and hermes_compose.changed
+
+- name: remind to run the one-time setup wizard if not configured
+  ansible.builtin.debug:
+    msg: >-
+      Hermes not configured yet — config.yaml missing. Run the interactive
+      setup ONCE on the host, then re-run this playbook:
+      docker run -it --rm -v {{ hermes_data_dir }}:/opt/data {{ hermes_image }} setup
+  when: not hermes_config.stat.exists

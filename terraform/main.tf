@@ -120,6 +120,25 @@ module "ollama" {
   description = "Ollama LLM server (CPU-only)."
 }
 
+module "hermes" {
+  source = "./modules/lxc"
+  name = "hermes"
+  template_file_id = local.debian_12_template
+  cpus = 2
+  memory_mb = 8192
+  disk_size_gb = 30
+  ip_address = "10.0.0.163/24"
+  gateway = "10.0.0.1"
+  ssh_public_keys = [var.ssh_public_key]
+
+  unprivileged = true
+  features = {
+    nesting = true
+  }
+  tags        = ["hermes", "agent", "lxc", "terraform"]
+  description = "Hermes-agent LXC."
+}
+
 module "k3s_nodes" {
   source   = "./modules/vm"
   for_each = local.k3s_nodes

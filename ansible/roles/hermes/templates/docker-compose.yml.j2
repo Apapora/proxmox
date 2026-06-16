@@ -1,0 +1,21 @@
+# Hermes Agent — single gateway container.
+# All state lives in the bind-mounted data dir ({{ hermes_data_dir }} -> /opt/data).
+# Render target: {{ hermes_stack_dir }}/docker-compose.yml (Ansible fills the vars).
+services:
+  hermes:
+    image: {{ hermes_image }}
+    container_name: hermes
+    command: gateway run
+    restart: unless-stopped
+    volumes:
+      - {{ hermes_data_dir }}:/opt/data
+    env_file:
+      - .env
+    ports:
+      - "{{ hermes_gateway_port }}:8642"
+{% if hermes_dashboard_enabled %}
+      - "{{ hermes_dashboard_port }}:9119"
+    environment:
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_HOST: "0.0.0.0"
+{% endif %}

@@ -25,6 +25,15 @@ output "ollama" {
   }
 }
 
+output "hermes" {
+  description = "Hermes LXC connection info"
+  value = {
+    vm_id        = module.hermes.vm_id
+    name         = module.hermes.name
+    ipv4_address = module.hermes.ipv4_address
+  }
+}
+
 output "k3s_nodes" {
   description = "Map of node name -> connection info, ready for Ansible inventory"
   value = {
