@@ -1,0 +1,19 @@
+---
+# Stack lives under /opt/homeassistant on the LXC. Compose file only
+# (no secrets yet — HA stores its own config under the config volume).
+homeassistant_stack_dir: "/opt/homeassistant"
+
+# HA's persistent config (configuration.yaml, .storage, db, etc.).
+# Lives on rootfs. This is the thing to back up.
+homeassistant_config_dir: "/opt/homeassistant/config"
+
+# Pin to a release series. Bump deliberately. `stable` follows monthly
+# releases; pin a digit (e.g. 2026.6) if you want change control.
+homeassistant_image: "ghcr.io/home-assistant/home-assistant:stable"
+
+# HA's web UI / API port. Reached on the LXC IP directly because the
+# container runs network_mode: host (needed for mDNS discovery + LAN reach
+# to the Crestron processor).
+homeassistant_port: 8123
+
+homeassistant_tz: "Asia/Taipei"

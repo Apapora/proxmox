@@ -1,0 +1,384 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+logger:
+  default: info
+  logs:
+    custom_components.crestron: debug
+
+crestron:
+  port: 16384
+    # for syncing HA state to control system joins
+    #to_joins:
+    #...
+    # for invoking HA scripts when control system joins change
+    #from_joins:
+    #...
+
+switch:
+  # Lights
+  # NOTE: joins are +2 vs the ISC dig_out pin number — the two analog joins
+  # (aout1/aout2 = Light2/3 dimmer levels) occupy XSIG join positions 1-2 on
+  # the single Intersystem Communications symbol, shifting every digital join
+  # up by 2. So switch_join = (dig_out pin) + 2. e.g. Light1_On=dig_out1 -> 3.
+  - platform: crestron
+    name: "Light Center"
+    switch_join: 3
+  - platform: crestron
+    name: "Light Window"
+    switch_join: 6
+  - platform: crestron
+    name: "Light Entry"
+    switch_join: 7
+  - platform: crestron
+    name: "Light Study"
+    switch_join: 8
+  # Blinds
+  - platform: crestron
+    name: "Blind R2 Up"
+    switch_join: 9
+  - platform: crestron
+    name: "Blind R2 Stop"
+    switch_join: 10
+  - platform: crestron
+    name: "Blind R2 Down"
+    switch_join: 11
+  - platform: crestron
+    name: "Blind R1 Up"
+    switch_join: 12
+  - platform: crestron
+    name: "Blind R1 Stop"
+    switch_join: 13
+  - platform: crestron
+    name: "Blind R1 Down"
+    switch_join: 14
+  - platform: crestron
+    name: "Blind M Up"
+    switch_join: 17
+  - platform: crestron
+    name: "Blind M Stop"
+    switch_join: 16
+  - platform: crestron
+    name: "Blind M Down"
+    switch_join: 15
+  
+  - platform: crestron
+    name: "Blind L1 Up"
+    switch_join: 18
+  - platform: crestron
+    name: "Blind L1 Stop"
+    switch_join: 19
+  - platform: crestron
+    name: "Blind L1 Down"
+    switch_join: 20
+  - platform: crestron
+    name: "Blind L2 Up"
+    switch_join: 21
+  - platform: crestron
+    name: "Blind L2 Stop"
+    switch_join: 22
+  - platform: crestron
+    name: "Blind L2 Down"
+    switch_join: 23
+  - platform: crestron
+    name: "Blind Study Up"
+    switch_join: 24
+  - platform: crestron
+    name: "Blind Study Stop"
+    switch_join: 25
+  - platform: crestron
+    name: "Blind Study Down"
+    switch_join: 26
+  # All-blinds group (single command drives every blind via COM B broadcast)
+  - platform: crestron
+    name: "Blind All Up"
+    switch_join: 27
+  - platform: crestron
+    name: "Blind All Stop"
+    switch_join: 28
+  - platform: crestron
+    name: "Blind All Down"
+    switch_join: 29
+
+template:
+  - cover:
+      - name: "Blind R2"
+        unique_id: crestron_blind_r2
+        device_class: blind
+        open_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_r2_up
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_r2_up
+        close_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_r2_down
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_r2_down
+        stop_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_r2_stop
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_r2_stop
+      - name: "Blind R1"
+        unique_id: crestron_blind_r1
+        device_class: blind
+        open_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_r1_up
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_r1_up
+        close_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_r1_down
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_r1_down
+        stop_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_r1_stop
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_r1_stop
+      - name: "Blind M"
+        unique_id: crestron_blind_m
+        device_class: blind
+        open_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_m_up
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_m_up
+        close_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_m_down
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_m_down
+        stop_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_m_stop
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_m_stop
+      - name: "Blind L1"
+        unique_id: crestron_blind_l1
+        device_class: blind
+        open_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_l1_up
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_l1_up
+        close_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_l1_down
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_l1_down
+        stop_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_l1_stop
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_l1_stop
+      - name: "Blind L2"
+        unique_id: crestron_blind_l2
+        device_class: blind
+        open_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_l2_up
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_l2_up
+        close_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_l2_down
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_l2_down
+        stop_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_l2_stop
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_l2_stop
+      - name: "Blind Study"
+        unique_id: crestron_blind_study
+        device_class: blind
+        open_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_study_up
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_study_up
+        close_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_study_down
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_study_down
+        stop_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_study_stop
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_study_stop
+      - name: "All Blinds"
+        unique_id: crestron_blind_all
+        device_class: blind
+        open_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_all_up
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_all_up
+        close_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_all_down
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_all_down
+        stop_cover:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.blind_all_stop
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target:
+              entity_id: switch.blind_all_stop
+  # Area-assignable wrappers for the Crestron lights. The raw crestron
+  # switch/light entities have no unique_id (can't be put in an Area or
+  # renamed), so these template entities wrap them, carry a unique_id, and
+  # are what you assign to the Living Room area + expose to voice.
+  # Hide the underlying switch.light_* / light.light_2/3 entities in the UI.
+  - switch:
+      - name: "Center Light"
+        unique_id: lr_center_light
+        state: "{{ is_state('switch.light_center', 'on') }}"
+        turn_on:
+          - action: switch.turn_on
+            target: { entity_id: switch.light_center }
+        turn_off:
+          - action: switch.turn_off
+            target: { entity_id: switch.light_center }
+      - name: "Window Light"
+        unique_id: lr_window_light
+        state: "{{ is_state('switch.light_window', 'on') }}"
+        turn_on:
+          - action: switch.turn_on
+            target: { entity_id: switch.light_window }
+        turn_off:
+          - action: switch.turn_off
+            target: { entity_id: switch.light_window }
+      - name: "Entry Light"
+        unique_id: lr_entry_light
+        state: "{{ is_state('switch.light_entry', 'on') }}"
+        turn_on:
+          - action: switch.turn_on
+            target: { entity_id: switch.light_entry }
+        turn_off:
+          - action: switch.turn_off
+            target: { entity_id: switch.light_entry }
+      - name: "Study Light"
+        unique_id: lr_study_light
+        state: "{{ is_state('switch.light_study', 'on') }}"
+        turn_on:
+          - action: switch.turn_on
+            target: { entity_id: switch.light_study }
+        turn_off:
+          - action: switch.turn_off
+            target: { entity_id: switch.light_study }
+  - light:
+      - name: "Front Light"
+        unique_id: lr_front_light
+        state: "{{ states('light.light_2') }}"
+        level: "{{ state_attr('light.light_2', 'brightness') | int(0) }}"
+        turn_on:
+          - action: light.turn_on
+            target: { entity_id: light.light_2 }
+        turn_off:
+          - action: light.turn_off
+            target: { entity_id: light.light_2 }
+        set_level:
+          - action: light.turn_on
+            target: { entity_id: light.light_2 }
+            data:
+              brightness: "{{ brightness }}"
+      - name: "Back Light"
+        unique_id: lr_back_light
+        state: "{{ states('light.light_3') }}"
+        level: "{{ state_attr('light.light_3', 'brightness') | int(0) }}"
+        turn_on:
+          - action: light.turn_on
+            target: { entity_id: light.light_3 }
+        turn_off:
+          - action: light.turn_off
+            target: { entity_id: light.light_3 }
+        set_level:
+          - action: light.turn_on
+            target: { entity_id: light.light_3 }
+            data:
+              brightness: "{{ brightness }}"
+
+light:
+  - platform: crestron
+    name: "Light 2"
+    brightness_join: 1      # analog join
+    type: brightness
+  - platform: crestron
+    name: "Light 3"
+    brightness_join: 2     # analog join
+    type: brightness

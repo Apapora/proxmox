@@ -1,0 +1,7 @@
+---
+- name: install + configure Home Assistant LXC (Docker container)
+  hosts: homeassistant
+  roles:
+    - common
+    - docker
+    - homeassistant

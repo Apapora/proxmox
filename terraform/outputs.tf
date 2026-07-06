@@ -34,6 +34,15 @@ output "hermes" {
   }
 }
 
+output "homeassistant" {
+  description = "Home Assistant LXC connection info"
+  value = {
+    vm_id        = module.homeassistant.vm_id
+    name         = module.homeassistant.name
+    ipv4_address = module.homeassistant.ipv4_address
+  }
+}
+
 output "k3s_nodes" {
   description = "Map of node name -> connection info, ready for Ansible inventory"
   value = {

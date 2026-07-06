@@ -1,0 +1,58 @@
+# Managed by Ansible. Edits will be overwritten.
+# Home Assistant Container (not HAOS — no Supervisor / add-on store).
+#
+# network_mode: host is REQUIRED here, not optional:
+#   - mDNS / SSDP discovery of LAN devices needs raw L2 access.
+#   - HA must reach the Crestron CP2E processor on the LAN (XSIG/EISC or MQTT)
+#     to drive AV / lights / shades.
+# Consequence: HA binds {{ homeassistant_port }} on the LXC IP directly;
+# no port mapping. Reach it at http://10.0.0.164:{{ homeassistant_port }}.
+
+services:
+  homeassistant:
+    image: {{ homeassistant_image }}
+    container_name: homeassistant
+    restart: unless-stopped
+    network_mode: host
+    privileged: false
+    environment:
+      TZ: "{{ homeassistant_tz }}"
+    volumes:
+      - {{ homeassistant_config_dir }}:/config
+      # Lets HA read host timezone; harmless, recommended by HA docs.
+      - /etc/localtime:/etc/localtime:ro
+
+  # ---------------------------------------------------------------------------
+  # Voice pipeline (HA Assist) — add when wiring voice control of Crestron.
+  # Container deploy has no add-on store, so STT/TTS/wake-word run as their own
+  # Wyoming containers and get registered in HA via the Wyoming integration.
+  # Uncomment, then in HA: Settings -> Devices -> Add Wyoming integration ->
+  # host 127.0.0.1, ports below.
+  # ---------------------------------------------------------------------------
+  # whisper:
+  #   image: rhasspy/wyoming-whisper:latest
+  #   container_name: wyoming-whisper
+  #   restart: unless-stopped
+  #   command: --model base-int8 --language en
+  #   volumes:
+  #     - {{ homeassistant_stack_dir }}/whisper-data:/data
+  #   ports:
+  #     - "10300:10300"
+  #
+  # piper:
+  #   image: rhasspy/wyoming-piper:latest
+  #   container_name: wyoming-piper
+  #   restart: unless-stopped
+  #   command: --voice en_US-lessac-medium
+  #   volumes:
+  #     - {{ homeassistant_stack_dir }}/piper-data:/data
+  #   ports:
+  #     - "10200:10200"
+  #
+  # openwakeword:
+  #   image: rhasspy/wyoming-openwakeword:latest
+  #   container_name: wyoming-openwakeword
+  #   restart: unless-stopped
+  #   command: --preload-model 'ok_nabu'
+  #   ports:
+  #     - "10400:10400"

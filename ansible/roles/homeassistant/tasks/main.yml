@@ -1,0 +1,54 @@
+---
+- name: ensure stack dir exists
+  ansible.builtin.file:
+    path: "{{ homeassistant_stack_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: ensure HA config dir exists
+  ansible.builtin.file:
+    path: "{{ homeassistant_config_dir }}"
+    state: directory
+    mode: "0755"
+
+# copy (not template): the HA config contains Home Assistant Jinja
+# expressions ({{ is_state(...) }}, {{ states(...) }}) meant for HA's own
+# templating. Rendering it through Ansible's Jinja would fail on those.
+- name: deploy Home Assistant configuration.yaml
+  ansible.builtin.copy:
+    src: "{{ role_path }}/templates/config.yaml"
+    dest: "{{ homeassistant_config_dir }}/configuration.yaml"
+    mode: "0644"
+  notify: restart homeassistant
+
+- name: render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ homeassistant_stack_dir }}/docker-compose.yml"
+    mode: "0640"
+  register: compose_rendered
+
+- name: bring stack up (pulls image on first run)
+  community.docker.docker_compose_v2:
+    project_src: "{{ homeassistant_stack_dir }}"
+    state: present
+  register: compose_up
+
+- name: restart stack if compose changed
+  community.docker.docker_compose_v2:
+    project_src: "{{ homeassistant_stack_dir }}"
+    state: restarted
+  when: compose_rendered.changed and not compose_up.changed
+
+- name: install boot-time auto-resume unit
+  ansible.builtin.template:
+    src: homeassistant-compose.service.j2
+    dest: /etc/systemd/system/homeassistant-compose.service
+    mode: "0644"
+  register: ha_unit
+
+- name: enable homeassistant-compose so the stack returns after a reboot (incl. travel)
+  ansible.builtin.systemd:
+    name: homeassistant-compose.service
+    enabled: true
+    daemon_reload: "{{ ha_unit.changed }}"

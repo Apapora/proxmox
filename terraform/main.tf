@@ -139,6 +139,31 @@ module "hermes" {
   description = "Hermes-agent LXC."
 }
 
+module "homeassistant" {
+  source           = "./modules/lxc"
+  name             = "homeassistant"
+  template_file_id = local.debian_12_template
+
+  # HA Container is light. Headroom left for the voice pipeline containers
+  # (wyoming-whisper / wyoming-piper / openwakeword) added later.
+  cpus         = 2
+  memory_mb    = 2048
+  disk_size_gb = 16
+
+  ip_address = "10.0.0.164/24"
+  gateway    = "10.0.0.1"
+
+  ssh_public_keys = [var.ssh_public_key]
+
+  unprivileged = true
+  features = {
+    nesting = true
+  }
+
+  tags        = ["homeassistant", "automation", "voice", "lxc", "terraform"]
+  description = "Home Assistant (Docker container). Voice control of Crestron CP2E AV/light/shade."
+}
+
 module "k3s_nodes" {
   source   = "./modules/vm"
   for_each = local.k3s_nodes
