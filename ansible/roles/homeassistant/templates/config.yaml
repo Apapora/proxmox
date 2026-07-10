@@ -23,24 +23,63 @@ crestron:
     #from_joins:
     #...
 
+binary_sensor:
+  # Raw Crestron Hardware Feedback Channels (dig_in)
+  # device_class is REQUIRED by npope's binary_sensor schema (no default) —
+  # omit it and the whole crestron.binary_sensor platform fails to load.
+  - platform: crestron
+    name: "Light Center FB"
+    is_on_join: 3
+    device_class: light
+  - platform: crestron
+    name: "Light Window FB"
+    is_on_join: 6
+    device_class: light
+  - platform: crestron
+    name: "Light Entry FB"
+    is_on_join: 7
+    device_class: light
+  - platform: crestron
+    name: "Light Study FB"
+    is_on_join: 8
+    device_class: light
+
 switch:
-  # Lights
+  # Raw Crestron Hardware Command Channels (dig_out)
   # NOTE: joins are +2 vs the ISC dig_out pin number — the two analog joins
   # (aout1/aout2 = Light2/3 dimmer levels) occupy XSIG join positions 1-2 on
   # the single Intersystem Communications symbol, shifting every digital join
   # up by 2. So switch_join = (dig_out pin) + 2. e.g. Light1_On=dig_out1 -> 3.
+  #
+  # Momentary intent pairs: each light has an ON pulse join (HA_On) and an
+  # OFF pulse join (HA_Off) into its LightSync module. Template lights below
+  # pulse these; LightSync tracks real state via Light#_FB -> binary_sensor.
+  # Off joins sit above the blind range (dig_out 28-31) to avoid collision.
   - platform: crestron
-    name: "Light Center"
-    switch_join: 3
+    name: "Light Center On"
+    switch_join: 3        # dig_out 1  -> HA_On
   - platform: crestron
-    name: "Light Window"
-    switch_join: 6
+    name: "Light Center Off"
+    switch_join: 30       # dig_out 28 -> HA_Off
   - platform: crestron
-    name: "Light Entry"
-    switch_join: 7
+    name: "Light Window On"
+    switch_join: 6        # dig_out 4  -> HA_On
   - platform: crestron
-    name: "Light Study"
-    switch_join: 8
+    name: "Light Window Off"
+    switch_join: 31       # dig_out 29 -> HA_Off
+  - platform: crestron
+    name: "Light Entry On"
+    switch_join: 7        # dig_out 5  -> HA_On
+  - platform: crestron
+    name: "Light Entry Off"
+    switch_join: 32       # dig_out 30 -> HA_Off
+  - platform: crestron
+    name: "Light Study On"
+    switch_join: 8        # dig_out 6  -> HA_On
+  - platform: crestron
+    name: "Light Study Off"
+    switch_join: 33       # dig_out 31 -> HA_Off
+
   # Blinds
   - platform: crestron
     name: "Blind R2 Up"
@@ -299,49 +338,76 @@ template:
           - action: switch.turn_off
             target:
               entity_id: switch.blind_all_stop
-  # Area-assignable wrappers for the Crestron lights. The raw crestron
-  # switch/light entities have no unique_id (can't be put in an Area or
-  # renamed), so these template entities wrap them, carry a unique_id, and
-  # are what you assign to the Living Room area + expose to voice.
-  # Hide the underlying switch.light_* / light.light_2/3 entities in the UI.
-  - switch:
+
+  - light:
+      # Unified Area-assignable Lights (Binary On/Off + Analog Dimmers combined)
+      # Momentary intent: turn_on pulses the ON join, turn_off pulses the OFF
+      # join (0.3s), guaranteeing a fresh rising edge into LightSync every
+      # time. State is real feedback from the load via binary_sensor.
       - name: "Center Light"
         unique_id: lr_center_light
-        state: "{{ is_state('switch.light_center', 'on') }}"
+        state: "{{ is_state('binary_sensor.light_center_fb', 'on') }}"
         turn_on:
           - action: switch.turn_on
-            target: { entity_id: switch.light_center }
-        turn_off:
+            target: { entity_id: switch.light_center_on }
+          - delay: "00:00:00.3"
           - action: switch.turn_off
-            target: { entity_id: switch.light_center }
+            target: { entity_id: switch.light_center_on }
+        turn_off:
+          - action: switch.turn_on
+            target: { entity_id: switch.light_center_off }
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target: { entity_id: switch.light_center_off }
+
       - name: "Window Light"
         unique_id: lr_window_light
-        state: "{{ is_state('switch.light_window', 'on') }}"
+        state: "{{ is_state('binary_sensor.light_window_fb', 'on') }}"
         turn_on:
           - action: switch.turn_on
-            target: { entity_id: switch.light_window }
-        turn_off:
+            target: { entity_id: switch.light_window_on }
+          - delay: "00:00:00.3"
           - action: switch.turn_off
-            target: { entity_id: switch.light_window }
+            target: { entity_id: switch.light_window_on }
+        turn_off:
+          - action: switch.turn_on
+            target: { entity_id: switch.light_window_off }
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target: { entity_id: switch.light_window_off }
+
       - name: "Entry Light"
         unique_id: lr_entry_light
-        state: "{{ is_state('switch.light_entry', 'on') }}"
+        state: "{{ is_state('binary_sensor.light_entry_fb', 'on') }}"
         turn_on:
           - action: switch.turn_on
-            target: { entity_id: switch.light_entry }
-        turn_off:
+            target: { entity_id: switch.light_entry_on }
+          - delay: "00:00:00.3"
           - action: switch.turn_off
-            target: { entity_id: switch.light_entry }
+            target: { entity_id: switch.light_entry_on }
+        turn_off:
+          - action: switch.turn_on
+            target: { entity_id: switch.light_entry_off }
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target: { entity_id: switch.light_entry_off }
+
       - name: "Study Light"
         unique_id: lr_study_light
-        state: "{{ is_state('switch.light_study', 'on') }}"
+        state: "{{ is_state('binary_sensor.light_study_fb', 'on') }}"
         turn_on:
           - action: switch.turn_on
-            target: { entity_id: switch.light_study }
-        turn_off:
+            target: { entity_id: switch.light_study_on }
+          - delay: "00:00:00.3"
           - action: switch.turn_off
-            target: { entity_id: switch.light_study }
-  - light:
+            target: { entity_id: switch.light_study_on }
+        turn_off:
+          - action: switch.turn_on
+            target: { entity_id: switch.light_study_off }
+          - delay: "00:00:00.3"
+          - action: switch.turn_off
+            target: { entity_id: switch.light_study_off }
+
       - name: "Front Light"
         unique_id: lr_front_light
         state: "{{ states('light.light_2') }}"
@@ -357,6 +423,7 @@ template:
             target: { entity_id: light.light_2 }
             data:
               brightness: "{{ brightness }}"
+
       - name: "Back Light"
         unique_id: lr_back_light
         state: "{{ states('light.light_3') }}"
@@ -374,11 +441,12 @@ template:
               brightness: "{{ brightness }}"
 
 light:
+  # Raw Crestron Hardware Dimmer Profiles (analog joins)
   - platform: crestron
     name: "Light 2"
-    brightness_join: 1      # analog join
+    brightness_join: 1
     type: brightness
   - platform: crestron
     name: "Light 3"
-    brightness_join: 2     # analog join
+    brightness_join: 2
     type: brightness
