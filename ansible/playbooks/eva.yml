@@ -1,0 +1,8 @@
+---
+# PREREQ (root@pam on PVE, once): pass /dev/net/tun into CT 108, then reboot.
+# See roles/tailscale/tasks/main.yml header for the exact conf lines.
+- name: configure eva base + tailscale
+  hosts: eva
+  roles:
+    - common
+    - tailscale

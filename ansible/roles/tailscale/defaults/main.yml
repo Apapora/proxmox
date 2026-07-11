@@ -1,0 +1,15 @@
+---
+# Tailscale apt repo (Debian). Release-aware so bookworm/trixie both resolve.
+tailscale_gpg_key_url: "https://pkgs.tailscale.com/stable/debian/{{ ansible_distribution_release }}.noarmor.gpg"
+tailscale_repo_url: "https://pkgs.tailscale.com/stable/debian"
+
+# Node hostname as it appears in the tailnet.
+tailscale_hostname: "{{ inventory_hostname }}"
+
+# Auth key for non-interactive `tailscale up`. Leave empty to require a
+# pre-authed node (role then only ensures install + running, never re-auths).
+# Supply via -e, group_vars, or vault: tailscale_authkey=tskey-auth-xxxx
+tailscale_authkey: ""
+
+# Extra flags appended to `tailscale up` (e.g. "--ssh", "--accept-routes").
+tailscale_up_args: ""

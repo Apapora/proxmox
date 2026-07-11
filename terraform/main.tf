@@ -164,6 +164,33 @@ module "homeassistant" {
   description = "Home Assistant (Docker container). Voice control of Crestron CP2E AV/light/shade."
 }
 
+module "eva" {
+  source           = "./modules/lxc"
+  name             = "eva"
+  template_file_id = local.debian_12_template
+
+  cpus         = 1
+  memory_mb    = 512
+  disk_size_gb = 8
+
+  ip_address = "10.0.0.165/24"
+  gateway    = "10.0.0.1"
+
+  # Base Debian LXC, nothing fancy. Injected key gets root SSH.
+  ssh_public_keys = [
+    var.ssh_public_key,
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHyez4kI7fhYWBAw7ISNatHpZzBypBicIK3VzypCHmnl evafoo@MacBookPro",
+  ]
+
+  unprivileged = true
+  features = {
+    nesting = true
+  }
+
+  tags        = ["eva", "lxc", "terraform"]
+  description = "Base Debian 12 LXC."
+}
+
 module "k3s_nodes" {
   source   = "./modules/vm"
   for_each = local.k3s_nodes
