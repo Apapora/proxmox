@@ -15,7 +15,8 @@ logger:
     custom_components.crestron: debug
 
 crestron:
-  port: 16384
+  port:
+    16384
     # for syncing HA state to control system joins
     #to_joins:
     #...
@@ -57,28 +58,28 @@ switch:
   # Off joins sit above the blind range (dig_out 28-31) to avoid collision.
   - platform: crestron
     name: "Light Center On"
-    switch_join: 3        # dig_out 1  -> HA_On
+    switch_join: 3 # dig_out 1  -> HA_On
   - platform: crestron
     name: "Light Center Off"
-    switch_join: 30       # dig_out 28 -> HA_Off
+    switch_join: 30 # dig_out 28 -> HA_Off
   - platform: crestron
     name: "Light Window On"
-    switch_join: 6        # dig_out 4  -> HA_On
+    switch_join: 6 # dig_out 4  -> HA_On
   - platform: crestron
     name: "Light Window Off"
-    switch_join: 31       # dig_out 29 -> HA_Off
+    switch_join: 31 # dig_out 29 -> HA_Off
   - platform: crestron
     name: "Light Entry On"
-    switch_join: 7        # dig_out 5  -> HA_On
+    switch_join: 7 # dig_out 5  -> HA_On
   - platform: crestron
     name: "Light Entry Off"
-    switch_join: 32       # dig_out 30 -> HA_Off
+    switch_join: 32 # dig_out 30 -> HA_Off
   - platform: crestron
     name: "Light Study On"
-    switch_join: 8        # dig_out 6  -> HA_On
+    switch_join: 8 # dig_out 6  -> HA_On
   - platform: crestron
     name: "Light Study Off"
-    switch_join: 33       # dig_out 31 -> HA_Off
+    switch_join: 33 # dig_out 31 -> HA_Off
 
   # Blinds
   - platform: crestron
@@ -101,14 +102,14 @@ switch:
     switch_join: 14
   - platform: crestron
     name: "Blind M Up"
-    switch_join: 17
+    switch_join: 15
   - platform: crestron
     name: "Blind M Stop"
     switch_join: 16
   - platform: crestron
     name: "Blind M Down"
-    switch_join: 15
-  
+    switch_join: 17
+
   - platform: crestron
     name: "Blind L1 Up"
     switch_join: 18
