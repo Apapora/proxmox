@@ -149,6 +149,16 @@ switch:
     switch_join: 29
 
 template:
+  - switch:
+    - name: "Sony TV"
+      unique_id: sony_tv_power
+      state: "{{ not is_state('media_player.sony_xr_83a90j', 'off') }}"
+      turn_on:
+        - action: media_player.turn_on
+          target: { entity_id: media_player.sony_xr_83a90j }
+      turn_off:
+        - action: media_player.turn_off
+          target: { entity_id: media_player.sony_xr_83a90j }
   - cover:
       - name: "Blind R2"
         unique_id: crestron_blind_r2
